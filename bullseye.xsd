@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+  <xs:element name="BullseyeCoverage">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element maxOccurs="unbounded" ref="folder"/>
+      </xs:sequence>
+      <xs:attribute name="buildId" use="required"/>
+      <xs:attribute name="dir" use="required" type="xs:anyURI"/>
+      <xs:attribute name="name" use="required" type="xs:NCName"/>
+      <xs:attribute name="version" use="required" type="xs:integer"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="folder">
+    <xs:complexType>
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <xs:element ref="folder"/>
+        <xs:element ref="src"/>
+      </xs:choice>
+      <xs:attribute name="cd_cov" use="required" type="xs:integer"/>
+      <xs:attribute name="cd_total" use="required" type="xs:integer"/>
+      <xs:attribute name="d_cov" use="required" type="xs:integer"/>
+      <xs:attribute name="d_total" use="required" type="xs:integer"/>
+      <xs:attribute name="fn_cov" use="required" type="xs:integer"/>
+      <xs:attribute name="fn_total" use="required" type="xs:integer"/>
+      <xs:attribute name="name" use="required" type="xs:NMTOKEN"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="src">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element maxOccurs="unbounded" ref="fn"/>
+      </xs:sequence>
+      <xs:attribute name="cd_cov" use="required" type="xs:integer"/>
+      <xs:attribute name="cd_total" use="required" type="xs:integer"/>
+      <xs:attribute name="d_cov" use="required" type="xs:integer"/>
+      <xs:attribute name="d_total" use="required" type="xs:integer"/>
+      <xs:attribute name="fn_cov" use="required" type="xs:integer"/>
+      <xs:attribute name="fn_total" use="required" type="xs:integer"/>
+      <xs:attribute name="mtime" use="required" type="xs:integer"/>
+      <xs:attribute name="name" use="required" type="xs:NCName"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="fn">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element maxOccurs="unbounded" ref="probe"/>
+      </xs:sequence>
+      <xs:attribute name="cd_cov" use="required" type="xs:integer"/>
+      <xs:attribute name="cd_total" use="required" type="xs:integer"/>
+      <xs:attribute name="d_cov" use="required" type="xs:integer"/>
+      <xs:attribute name="d_total" use="required" type="xs:integer"/>
+      <xs:attribute name="fn_cov" use="required" type="xs:integer"/>
+      <xs:attribute name="fn_total" use="required" type="xs:integer"/>
+      <xs:attribute name="name" use="required"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="probe">
+    <xs:complexType>
+      <xs:attribute name="col_seq" type="xs:integer"/>
+      <xs:attribute name="column" type="xs:integer"/>
+      <xs:attribute name="event" use="required" type="xs:NCName"/>
+      <xs:attribute name="kind" use="required" type="xs:NCName"/>
+      <xs:attribute name="line" use="required" type="xs:integer"/>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>
