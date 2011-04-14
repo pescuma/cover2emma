@@ -46,10 +46,10 @@ namespace cover2emma
 
 			emma.report result;
 
-			if (inputType == "-dotcover")
+			if (String.Compare(inputType, "-dotcover", true) == 0)
 				result = new DotCoverToEmma().ToEmma(inputFilename);
 
-			else if (inputType == "-bullseye")
+			else if (String.Compare(inputType, "-bullseye", true) == 0)
 				result = new BullseyeToEmma().ToEmma(inputFilename);
 
 			else
