@@ -24,6 +24,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using dotcover;
 
 namespace cover2emma
 {
@@ -40,6 +41,9 @@ namespace cover2emma
 
 		private static void Fix(dotcover.Root dc)
 		{
+			if (dc.Assembly == null)
+				dc.Assembly = new Assembly[0];
+
 			ForEachClass(dc, type =>
 			                 	{
 			                 		if (type.Member == null)
