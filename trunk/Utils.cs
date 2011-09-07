@@ -26,6 +26,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Xml;
 using System.Xml.Serialization;
 
 namespace cover2emma
@@ -33,6 +34,21 @@ namespace cover2emma
 	public class Utils
 	{
 		private static Regex values = new Regex(@"\(([0-9]+)/([0-9]+)\)");
+
+		// Helper class to ignore namespaces when de-serializing
+		// from http://stackoverflow.com/questions/870293/can-i-make-xmlserializer-ignore-the-namespace-on-deserialization/873281#873281
+		private class NamespaceIgnorantXmlTextReader : XmlTextReader
+		{
+			public NamespaceIgnorantXmlTextReader(TextReader reader)
+				: base(reader)
+			{
+			}
+
+			public override string NamespaceURI
+			{
+				get { return ""; }
+			}
+		}
 
 		public static T ReadXML<T>(string filename)
 		{
@@ -42,7 +58,7 @@ namespace cover2emma
 				textReader = new StreamReader(filename);
 
 				XmlSerializer deserializer = new XmlSerializer(typeof (T));
-				return (T) deserializer.Deserialize(textReader);
+				return (T) deserializer.Deserialize(new NamespaceIgnorantXmlTextReader(textReader));
 			}
 			finally
 			{
@@ -355,8 +371,8 @@ namespace cover2emma
 
 		public void Add(int covered, int total)
 		{
-			this.Total += total;
-			this.Covered += covered;
+			Total += total;
+			Covered += covered;
 		}
 
 		public override string ToString()

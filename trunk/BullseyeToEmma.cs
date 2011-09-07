@@ -24,7 +24,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using emma;
 
 namespace cover2emma
 {
@@ -50,7 +49,7 @@ namespace cover2emma
 			               			var package = new emma.package();
 			               			package.name = ConvertPathToPackageName(path);
 			               			package.coverage = CreateCoverage(folder);
-			               			package.srcfile = new srcfile[0];
+			               			package.srcfile = new emma.srcfile[0];
 
 			               			folders.Add(path, package);
 			               		}
@@ -142,7 +141,7 @@ namespace cover2emma
 			return Utils.CreateCoverage("0", "0", folder.fn_cov, folder.fn_total, folder.cd_cov, folder.cd_total, "0", "0");
 		}
 
-		private static coverage[] CreateCoverage(bullseye.src src, emma.@class[] classes)
+		private static emma.coverage[] CreateCoverage(bullseye.src src, emma.@class[] classes)
 		{
 			Coverage cov = new Coverage();
 			foreach (var cls in classes)
