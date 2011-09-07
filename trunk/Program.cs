@@ -31,6 +31,10 @@ namespace cover2emma
 	{
 		private static int Main(string[] args)
 		{
+			AppDomain.CurrentDomain.UnhandledException += NBug.Handler.UnhandledException;
+			System.Threading.Tasks.TaskScheduler.UnobservedTaskException += NBug.Handler.UnobservedTaskException;
+			NBug.Settings.CustomInfo.Add("Command line: " + string.Join(" ", args));
+
 			if (args.Length != 3)
 			{
 				Console.WriteLine("Use:");
@@ -43,6 +47,9 @@ namespace cover2emma
 			var inputType = args[0];
 			var inputFilename = args[1];
 			var outputFilename = args[2];
+
+			NBug.Settings.AdditionalReportFiles.Add(inputFilename);
+			NBug.Settings.AdditionalReportFiles.Add(outputFilename);
 
 			emma.report result;
 
