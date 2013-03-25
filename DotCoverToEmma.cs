@@ -45,11 +45,8 @@ namespace cover2emma
 
 			ForEachClass(dc, type =>
 			                 	{
-			                 		if (type.Member == null)
-			                 			type.Member = new dotcover.Member[0];
-
-			                 		if (type.Type1 == null)
-			                 			type.Type1 = new dotcover.Type[0];
+			                 		if (type.Items == null)
+                                        type.Items = new object[0];
 			                 	});
 		}
 
@@ -75,34 +72,54 @@ namespace cover2emma
 			List<emma.package> pkgs = new List<emma.package>();
 			foreach (var assembly in dc.Assembly)
 			{
-				emma.package pkg = new emma.package();
+                if (assembly.Namespace != null)
+                {
+                    foreach (var ns in assembly.Namespace)
+                    {
+                        emma.package pkg = new emma.package();
 
-				pkg.name = assembly.Name;
-				pkg.coverage = CreateCoverage(assembly);
+                        pkg.name = ns.Name;
+                        pkg.coverage = CreateCoverage(ns);
 
-				List<emma.srcfile> files = new List<emma.srcfile>();
+                        CreateTypes(pkg, ns.Type);
 
-				List<dotcover.Type> types = GetTypes(assembly);
+                        pkgs.Add(pkg);
+                    }
+                }
+                if (assembly.Type != null)
+                {
+                    emma.package pkg = new emma.package();
 
-				foreach (var type in types)
-				{
-					emma.srcfile file = new emma.srcfile();
+                    pkg.name = assembly.Name;
+                    pkg.coverage = CreateCoverage(assembly);
 
-					file.name = type.Name + ".cs_guess";
-					file.coverage = CreateCoverage(type);
+                    CreateTypes(pkg, assembly.Type);
 
-					file.@class = new emma.@class[1];
-					file.@class[0] = CreateClass(type);
-
-					files.Add(file);
-				}
-				pkg.srcfile = files.ToArray();
-
-				pkgs.Add(pkg);
-			}
+                    pkgs.Add(pkg);
+                }
+            }
 			ret.package = pkgs.ToArray();
 
 			return ret;
+        }
+
+        private static void CreateTypes(emma.package pkg, dotcover.Type[] types)
+        {
+			List<emma.srcfile> files = new List<emma.srcfile>();
+
+			foreach (var type in types)
+			{
+				emma.srcfile file = new emma.srcfile();
+
+				file.name = type.Name + ".cs_guess";
+				file.coverage = CreateCoverage(type);
+
+				file.@class = new emma.@class[1];
+				file.@class[0] = CreateClass(type);
+
+				files.Add(file);
+			}
+			pkg.srcfile = files.ToArray();
 		}
 
 		private static List<dotcover.Type> GetTypes(dotcover.Assembly assembly)
@@ -125,29 +142,31 @@ namespace cover2emma
 			var objects = new List<object>();
 			objects.AddRange(CreateCoverage(type));
 
-			if (type.Type1.Length > 0)
-			{
-				objects.AddRange(type.Type1.Select(CreateClass));
-			}
+            foreach (object inner in type.Items)
+            {
+                if (inner is dotcover.Type)
+                    objects.Add(CreateClass((dotcover.Type)inner));
+            }
 
-			result.Items = objects.ToArray();
+            result.Items = objects.ToArray();
 
-			List<emma.method> methods = new List<emma.method>();
-			foreach (var method in type.Member)
-			{
-				emma.method m = new emma.method();
+            List<emma.method> methods = new List<emma.method>();
+            ForEachMethod(type, true, entry =>
+            {
+                emma.method m = new emma.method();
 
-				m.name = method.Name;
-				m.coverage = CreateCoverate(method);
+                m.name = entry.Name;
+                m.coverage = CreateCoverate(entry);
 
-				methods.Add(m);
-			}
-			result.method = methods.ToArray();
+                methods.Add(m);
+            });
+
+            result.method = methods.ToArray();
 
 			return result;
 		}
 
-		private static emma.coverage[] CreateCoverage(dotcover.Root dc)
+        private static emma.coverage[] CreateCoverage(dotcover.Root dc)
 		{
 			DotCoverage cls = new DotCoverage();
 			ForEachClass(dc, cls.CountElements);
@@ -155,27 +174,41 @@ namespace cover2emma
 			DotCoverage method = new DotCoverage();
 			ForEachMethod(dc, method.CountElements);
 
-			DotCoverage cov = new DotCoverage();
-			ForEachMethod(dc, cov.AddElements);
+            DotCoverage cov = new DotCoverage();
+            cov.Add(int.Parse(dc.CoveredStatements), int.Parse(dc.TotalStatements));
 
 			return Utils.CreateCoverage(cls, method, cov, cov);
 		}
 
-		private static emma.coverage[] CreateCoverage(dotcover.Assembly assembly)
-		{
-			DotCoverage cls = new DotCoverage();
-			ForEachClass(assembly, cls.CountElements);
+        private static emma.coverage[] CreateCoverage(dotcover.Assembly assembly)
+        {
+            DotCoverage cls = new DotCoverage();
+            ForEachClass(assembly, cls.CountElements);
 
-			DotCoverage method = new DotCoverage();
-			ForEachMethod(assembly, method.CountElements);
+            DotCoverage method = new DotCoverage();
+            ForEachMethod(assembly, method.CountElements);
 
-			DotCoverage cov = new DotCoverage();
-			ForEachMethod(assembly, cov.AddElements);
+            DotCoverage cov = new DotCoverage();
+            cov.Add(int.Parse(assembly.CoveredStatements), int.Parse(assembly.TotalStatements));
 
-			return Utils.CreateCoverage(cls, method, cov, cov);
-		}
+            return Utils.CreateCoverage(cls, method, cov, cov);
+        }
 
-		private static emma.coverage[] CreateCoverage(dotcover.Type type)
+        private static emma.coverage[] CreateCoverage(dotcover.Namespace ns)
+        {
+            DotCoverage cls = new DotCoverage();
+            ForEachClass(ns, cls.CountElements);
+
+            DotCoverage method = new DotCoverage();
+            ForEachMethod(ns, method.CountElements);
+
+            DotCoverage cov = new DotCoverage();
+            cov.Add(int.Parse(ns.CoveredStatements), int.Parse(ns.TotalStatements));
+
+            return Utils.CreateCoverage(cls, method, cov, cov);
+        }
+
+        private static emma.coverage[] CreateCoverage(dotcover.Type type)
 		{
 			DotCoverage cls = new DotCoverage();
 			ForEachClass(type, cls.CountElements);
@@ -183,22 +216,22 @@ namespace cover2emma
 			DotCoverage method = new DotCoverage();
 			ForEachMethod(type, method.CountElements);
 
-			DotCoverage cov = new DotCoverage();
-			ForEachMethod(type, cov.AddElements);
+            DotCoverage cov = new DotCoverage();
+            cov.Add(int.Parse(type.CoveredStatements), int.Parse(type.TotalStatements));
 
 			return Utils.CreateCoverage(cls, method, cov, cov);
 		}
 
-		private static emma.coverage[] CreateCoverate(dotcover.Member member)
-		{
-			DotCoverage method = new DotCoverage();
-			ForEachMethod(member, method.CountElements);
+        private static emma.coverage[] CreateCoverate(Entry member)
+        {
+            DotCoverage method = new DotCoverage();
+            method.CountElements(member);
 
-			DotCoverage cov = new DotCoverage();
-			ForEachMethod(member, cov.AddElements);
+            DotCoverage cov = new DotCoverage();
+            cov.Add(member.CoveredStatements, member.TotalStatements);
 
-			return Utils.CreateCoverage(method, cov, cov);
-		}
+            return Utils.CreateCoverage(method, cov, cov);
+        }
 
 		private static emma.stats CreateStats(dotcover.Root dc)
 		{
@@ -235,16 +268,25 @@ namespace cover2emma
 				Add(int.Parse(type.CoveredStatements) > 0 ? 1 : 0, 1);
 			}
 
-			public void CountElements(dotcover.Member member)
+			public void CountElements(Entry member)
 			{
-				Add(int.Parse(member.CoveredStatements) > 0 ? 1 : 0, 1);
-			}
-
-			public void AddElements(dotcover.Member member)
-			{
-				Add(int.Parse(member.CoveredStatements), int.Parse(member.TotalStatements));
+				Add(member.CoveredStatements > 0 ? 1 : 0, 1);
 			}
 		}
+
+        private class Entry
+        {
+            public string Name;
+            public int CoveredStatements;
+            public int TotalStatements;
+
+            public Entry(string name, string covered, string total)
+            {
+                Name = name;
+                CoveredStatements = int.Parse(covered);
+                TotalStatements = int.Parse(total);
+            }
+        }
 
 		private static void ForEachPackage(dotcover.Root dc, Action<dotcover.Assembly> callback)
 		{
@@ -260,44 +302,173 @@ namespace cover2emma
 
 		private static void ForEachClass(dotcover.Assembly assembly, Action<dotcover.Type> callback)
 		{
-			List<dotcover.Type> types = GetTypes(assembly);
+            if (assembly.Namespace != null)
+                foreach (var ns in assembly.Namespace)
+                    ForEachClass(ns, callback);
 
-			types.ForEach(t => ForEachClass(t, callback));
+            if (assembly.Type != null)
+                foreach (var type in assembly.Type)
+                    ForEachClass(type, callback);
 		}
+
+        private static void ForEachClass(dotcover.Namespace ns, Action<dotcover.Type> callback)
+        {
+            foreach (var type in ns.Type)
+                ForEachClass(type, callback);
+        }
 
 		private static void ForEachClass(dotcover.Type type, Action<dotcover.Type> callback)
 		{
 			callback(type);
 
-			foreach (dotcover.Type inner in type.Type1)
-				ForEachClass(inner, callback);
+            foreach (object inner in type.Items)
+            {
+                if (inner is dotcover.Type)
+                    ForEachClass((dotcover.Type) inner, callback);
+            }
 		}
 
-		private static void ForEachMethod(dotcover.Root dc, Action<dotcover.Member> callback)
+        private static void ForEachMethod(dotcover.Root dc, Action<Entry> callback)
 		{
 			foreach (dotcover.Assembly assembly in dc.Assembly)
 				ForEachMethod(assembly, callback);
 		}
 
-		private static void ForEachMethod(dotcover.Assembly assembly, Action<dotcover.Member> callback)
-		{
-			List<dotcover.Type> types = GetTypes(assembly);
+        private static void ForEachMethod(dotcover.Assembly assembly, Action<Entry> callback)
+        {
+            if (assembly.Namespace != null)
+                foreach (var ns in assembly.Namespace)
+                    ForEachMethod(ns, callback);
 
-			types.ForEach(t => ForEachMethod(t, callback));
+            if (assembly.Type != null)
+                foreach (var type in assembly.Type)
+                    ForEachMethod(type, callback);
+        }
+
+        private static void ForEachMethod(dotcover.Namespace ns, Action<Entry> callback)
+        {
+            foreach (var type in ns.Type)
+                ForEachMethod(type, callback);
+        }
+
+        private static void ForEachMethod(dotcover.Type type, Action<Entry> callback)
+        {
+            ForEachMethod(type, false, callback);
+        }
+
+		private static void ForEachMethod(dotcover.Type type, Boolean skipInnerTypes, Action<Entry> callback)
+		{
+            foreach (object inner in type.Items)
+            {
+                if (inner is dotcover.Type)
+                {
+                    if (!skipInnerTypes)
+                        ForEachMethod((dotcover.Type)inner, false, callback);
+                }
+                else if (inner is dotcover.Constructor)
+                    ForEachMethod((dotcover.Constructor)inner, callback);
+
+                else if (inner is dotcover.Event)
+                    ForEachMethod((dotcover.Event)inner, callback);
+
+                else if (inner is dotcover.Member)
+                    ForEachMethod((dotcover.Member)inner, callback);
+
+                else if (inner is dotcover.Method)
+                    ForEachMethod((dotcover.Method)inner, callback);
+
+                else if (inner is dotcover.Property)
+                    ForEachMethod((dotcover.Property)inner, callback);
+            }
 		}
 
-		private static void ForEachMethod(dotcover.Type type, Action<dotcover.Member> callback)
-		{
-			foreach (dotcover.Member member in type.Member)
-				ForEachMethod(member, callback);
+        private static void ForEachMethod(dotcover.Constructor constructor, Action<Entry> callback)
+        {
+            if (constructor.Items == null)
+                callback(ToEntry(constructor));
+            else
+                ForEachMethodWithAnonymous(constructor.Items, callback, constructor.Name);
+        }
 
-			foreach (dotcover.Type inner in type.Type1)
-				ForEachMethod(inner, callback);
-		}
+        private static void ForEachMethod(dotcover.Event evt, Action<Entry> callback)
+        {
+            foreach (dotcover.Method method in evt.Method)
+                ForEachMethod(method, callback, evt.Name);
+        }
 
-		private static void ForEachMethod(dotcover.Member member, Action<dotcover.Member> callback)
-		{
-			callback(member);
-		}
+        private static void ForEachMethod(dotcover.Member member, Action<Entry> callback)
+        {
+            callback(ToEntry(member));
+        }
+
+        private static void ForEachMethod(dotcover.Method method, Action<Entry> callback, String parent = null)
+        {
+            if (method.Items == null)
+                callback(ToEntry(method, parent));
+            else
+                ForEachMethodWithAnonymous(method.Items, callback, JoinName(parent, method.Name));
+        }
+
+        private static void ForEachMethod(dotcover.Property property, Action<Entry> callback)
+        {
+            foreach (dotcover.Method method in property.Method)
+                ForEachMethod(method, callback, property.Name);
+        }
+
+        private static void ForEachMethod(dotcover.OwnCoverage ownCoverage, Action<Entry> callback, String parent)
+        {
+            callback(ToEntry(ownCoverage, parent));
+        }
+
+        private static void ForEachMethod(dotcover.AnonymousMethod method, Action<Entry> callback, String parent)
+        {
+            if (method.Items == null)
+                callback(ToEntry(method, parent));
+            else
+                ForEachMethodWithAnonymous(method.Items, callback, JoinName(parent, method.Name));
+        }
+
+        private static void ForEachMethodWithAnonymous(object[] items, Action<Entry> callback, String parent)
+        {
+            foreach (object item in items)
+            {
+                if (item is dotcover.OwnCoverage)
+                    ForEachMethod((dotcover.OwnCoverage)item, callback, parent);
+
+                else if (item is dotcover.AnonymousMethod)
+                    ForEachMethod((dotcover.AnonymousMethod)item, callback, parent);
+            }
+        }
+
+        private static string JoinName(string parent, string name)
+        {
+            if (parent == null)
+                return name;
+            else if (name == null)
+                return parent;
+            else
+                return parent + "  " + name; 
+        }
+
+        private static Entry ToEntry(object entry, String parent = null)
+        {
+            if (entry == null)
+                return null;
+
+            string name;
+            var nameProp = entry.GetType().GetProperty("Name");
+            if (nameProp != null)
+                name = (string)nameProp.GetValue(entry, null);
+            else
+                name = null;
+
+            string covered = (string) entry.GetType().GetProperty("CoveredStatements").GetValue(entry, null);
+            string total = (string) entry.GetType().GetProperty("TotalStatements").GetValue(entry, null);
+
+            if (covered == null || total == null)
+                return null;
+
+            return new Entry(JoinName(parent, name), covered, total);
+        }
 	}
 }
